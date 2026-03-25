@@ -8,6 +8,8 @@ from config.database import engine, Base
 from models import models
 from middleware.token_validation import ClerkAuthMiddleware
 
+from api.routers.tickets import router as tickets_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create all tables in the database asynchronously
@@ -40,5 +42,8 @@ async def health_check():
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
+
+
+api_router.include_router(tickets_router)
 
 app.include_router(api_router)
