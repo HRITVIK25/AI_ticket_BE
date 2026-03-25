@@ -24,3 +24,20 @@ class TicketRepository:
             return result.scalars().all()
         except Exception as e:
             raise Exception(f"DB Error: {str(e)}")
+
+    async def get_ticket_by_id(self, ticket_id: str) -> Ticket:
+        try:
+            stmt = select(Ticket).where(Ticket.id == ticket_id)
+            result = await self.db.execute(stmt)
+            return result.scalars().first()
+        except Exception as e:
+            raise Exception(f"DB Error: {str(e)}")
+
+    async def update_ticket(self, ticket: Ticket) -> Ticket:
+        try:
+            await self.db.commit()
+            await self.db.refresh(ticket)
+            return ticket
+        except Exception as e:
+            await self.db.rollback()
+            raise Exception(f"DB Error: {str(e)}")

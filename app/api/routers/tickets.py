@@ -56,3 +56,32 @@ async def get_tickets(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.post("/{ticket_id}/ai-response", response_model=TicketResponse)
+async def mock_ai_response(
+    ticket_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        org_id = getattr(request.state, "org_id", None)
+
+        if not org_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: org_id missing")
+
+        service = TicketService(db)
+        ticket = await service.generate_mock_ai_response(ticket_id)
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+
+        if ticket.org_id != org_id:
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot access this ticket")
+
+        return ticket
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
