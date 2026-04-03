@@ -9,6 +9,7 @@ from models import models
 from middleware.token_validation import ClerkAuthMiddleware
 
 from api.routers.tickets import router as tickets_router
+from api.routers.kb import router as kb_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,5 +46,6 @@ async def root():
 
 
 api_router.include_router(tickets_router)
+api_router.include_router(kb_router)
 
 app.include_router(api_router)
