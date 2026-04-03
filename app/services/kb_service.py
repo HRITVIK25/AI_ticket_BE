@@ -16,7 +16,8 @@ from qdrant_client.models import (
     PointStruct,
     Filter,
     FieldCondition,
-    MatchValue
+    MatchValue,
+    PayloadSchemaType
 )
 
 from models.models import KnowledgeBase
@@ -109,6 +110,17 @@ class KBService:
                     distance=Distance.COSINE
                 )
             )
+
+        # Always ensure payload indexes exist (idempotent — safe to call every time)
+        for field in ("org_id", "kb_id"):
+            try:
+                await qdrant_client.create_payload_index(
+                    collection_name=COLLECTION_NAME,
+                    field_name=field,
+                    field_schema=PayloadSchemaType.KEYWORD,
+                )
+            except Exception:
+                pass  # Index already exists — ignore
 
     # ---------------------------
     # INGEST
