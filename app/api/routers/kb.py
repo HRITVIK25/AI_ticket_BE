@@ -29,6 +29,10 @@ async def ingest_kb(
         if not org_id:
             raise HTTPException(status_code=401, detail="Unauthorized: org_id missing")
 
+        role = getattr(request.state, "role", None)
+        if role != "ticket_admin":
+            raise HTTPException(status_code=403, detail="Forbidden: Requires ticket_admin role")
+
         if not title or not description:
             raise HTTPException(status_code=400, detail="Title and description are required")
 

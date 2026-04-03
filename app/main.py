@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -37,7 +37,9 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api/v1")
 
 @api_router.get("/health")
-async def health_check():
+async def health_check(request: Request):
+    if getattr(request.state, "role", None) != "ticket_admin":
+        raise HTTPException(status_code=403, detail="Forbidden: Requires ticket_admin role")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
 @api_router.get("/")

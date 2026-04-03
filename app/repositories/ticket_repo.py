@@ -25,6 +25,17 @@ class TicketRepository:
         except Exception as e:
             raise Exception(f"DB Error: {str(e)}")
 
+    async def get_tickets_by_org_and_customer(self, org_id: str, customer_id: str):
+        try:
+            stmt = select(Ticket).where(
+                Ticket.org_id == org_id,
+                Ticket.created_by == customer_id
+            )
+            result = await self.db.execute(stmt)
+            return result.scalars().all()
+        except Exception as e:
+            raise Exception(f"DB Error: {str(e)}")
+
     async def get_ticket_by_id(self, ticket_id: str) -> Ticket:
         try:
             stmt = select(Ticket).where(Ticket.id == ticket_id)

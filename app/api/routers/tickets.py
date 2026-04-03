@@ -42,12 +42,14 @@ async def get_tickets(
 ):
     try:
         org_id = getattr(request.state, "org_id", None)
+        user_id = getattr(request.state, "user_id", None)
+        role = getattr(request.state, "role", None)
 
-        if not org_id:
-            raise HTTPException(status_code=401, detail="Unauthorized: org_id missing")
+        if not org_id or not user_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: org_id or user_id missing")
 
         service = TicketService(db)
-        tickets = await service.get_tickets_by_org(org_id)
+        tickets = await service.get_tickets_for_user(org_id, role, user_id)
 
         return tickets
 
@@ -83,5 +85,31 @@ async def rag_ai_response(
     except HTTPException:
         raise
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.post("/{ticket_id}/{status}", response_model=TicketResponse)
+async def resolve_ticket(
+    ticket_id: str,
+    status: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        org_id = getattr(request.state, "org_id", None)
+        if not org_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: org_id missing")
+
+        service = TicketService(db)
+        ticket = await service.update_ticket_status(ticket_id, status)
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        if ticket.org_id != org_id:
+            raise HTTPException(status_code=403, detail="Forbidden: You cannot access this ticket")
+
+        return ticket
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

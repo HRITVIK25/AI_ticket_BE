@@ -93,6 +93,27 @@ class TicketService:
         except Exception as e:
             raise Exception(f"Service Error: {str(e)}")
 
+    async def get_tickets_for_user(self, org_id: str, role: str, user_id: str) -> List[Ticket]:
+        try:
+            if role == "ticket_admin":
+                return await self.repo.get_tickets_by_org(org_id)
+            elif role == "customer":
+                return await self.repo.get_tickets_by_org_and_customer(org_id, user_id)
+            else:
+                return []
+        except Exception as e:
+            raise Exception(f"Service Error: {str(e)}")
+
+    async def update_ticket_status(self, ticket_id: str, status: str) -> Ticket:
+        try:
+            ticket = await self.repo.get_ticket_by_id(ticket_id)
+            if not ticket:
+                return None
+            ticket.status = status
+            return await self.repo.update_ticket(ticket)
+        except Exception as e:
+            raise Exception(f"Service Error: {str(e)}")
+
     # ── RAG AI Response ───────────────────────────────────────────────────────
     async def generate_rag_ai_response(self, ticket_id: str) -> Ticket:
         try:
@@ -140,36 +161,46 @@ class TicketService:
 
             # ── 3. Build grounded prompt ──────────────────────────────────
             if context:
-                prompt = f"""You are a helpful customer support AI assistant.
-Use ONLY the context below to answer the customer's question.
-If the context does not contain enough information to answer, say so politely and suggest they contact human support.
+                prompt = f"""You are a knowledgeable and empathetic customer support assistant for our helpdesk.
 
---- CONTEXT ---
-{context}
---- END CONTEXT ---
+        Your job is to resolve the customer's issue using the reference documentation provided below.
 
-Customer ticket title: {ticket.title}
-Customer message: {ticket.description}
+        INSTRUCTIONS:
+        - Answer directly and conversationally — do NOT copy-paste from the docs
+        - Synthesize the relevant information into a clear, step-by-step response tailored to the customer's specific issue
+        - If the docs cover the topic partially, answer what you can and flag what's uncertain
+        - If the docs don't cover it at all, admit it honestly and escalate gracefully
+        - Keep your tone warm, professional, and solution-focused
+        - Avoid jargon unless the customer used it first
+        - End with a follow-up offer (e.g. "Let me know if that resolves it!")
 
-Provide a clear, concise, and helpful response:
+        --- REFERENCE DOCUMENTATION ---
+        {context}
+        --- END DOCUMENTATION ---
 
-Return the response in the following format:
-reply: <response>
-"""
+        TICKET TITLE: {ticket.title}
+        CUSTOMER MESSAGE:
+        {ticket.description}
+
+        Your response (address the customer directly, do not mention "the docs" or "the context"):"""
+
             else:
-                # No KB context found — graceful fallback
-                prompt = f"""You are a helpful customer support AI assistant.
-You do not have specific documentation for this query, so answer based on general knowledge.
+                prompt = f"""You are a knowledgeable and empathetic customer support assistant for our helpdesk.
 
-Customer ticket title: {ticket.title}
-Customer message: {ticket.description}
+            You don't have specific internal documentation for this query, so rely on general best practices and product knowledge.
 
-Provide a clear, concise, and polite response, and suggest they contact a human agent if needed:
+            INSTRUCTIONS:
+            - Be honest that you may not have full details specific to their account or setup
+            - Offer the most helpful general guidance you can
+            - Clearly recommend escalation to a human agent for anything account-specific, billing-related, or urgent
+            - Keep your tone warm, professional, and solution-focused
+            - Do not make up specific policies, prices, or procedures you're unsure of
 
-Return the response in the following format:
-reply: <response>
-"""
+            TICKET TITLE: {ticket.title}
+            CUSTOMER MESSAGE:
+            {ticket.description}
 
+        Your response (address the customer directly):"""
             # ── 4. Call Gemini (free tier — gemini-2.0-flash) ────────────
             ai_reply = await asyncio.to_thread(_call_gemini, prompt)
 
