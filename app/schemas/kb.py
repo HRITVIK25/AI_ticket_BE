@@ -13,10 +13,9 @@ class KBResponse(BaseModel):
     id: UUID
     org_id: str
     title: str
-    kb_id: str
     description: Optional[str] = None
     file_names: List[str] = []
-    content: str
+    tag: Optional[str] = None
     type: str
     created_at: datetime
     updated_at: datetime
@@ -32,6 +31,7 @@ class KBSearchResult(BaseModel):
     kb_id: str
     description: Optional[str] = None
     file_names: List[str] = []
+    tag: Optional[str] = None
     content: str
     type: str
     score: float          # cosine similarity score

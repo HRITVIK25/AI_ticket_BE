@@ -11,6 +11,18 @@ class TicketService:
 
     async def create_ticket(self, data: TicketCreate, org_id: str, created_by: str) -> Ticket:
         try:
+            from repositories.kb_repo import KBRepository
+            kb_repo = KBRepository(self.repo.db)
+            
+            kb_id = None
+            if data.tag:
+                kb_match = await kb_repo.get_kb_by_tag(org_id, data.tag)
+                if kb_match:
+                    kb_id = str(kb_match.id)
+                else:
+                    raise HTTPException(status_code=404, detail="KB not found")
+
+
             # Always start with a fresh messages list containing just the description
             initial_messages = [
                 {
@@ -27,6 +39,8 @@ class TicketService:
                 assigned_to="AI",
                 title=data.title,
                 description=data.description,
+                tag=data.tag,
+                kb_id=kb_id,
                 messages=initial_messages
             )
 

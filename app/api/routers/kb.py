@@ -20,6 +20,7 @@ async def ingest_kb(
     request: Request,
     title: str = Form(...),
     description: str = Form(...),
+    tag: str = Form(""),
     files: List[UploadFile] = File(default=[]),
     db: AsyncSession = Depends(get_db),
 ):
@@ -39,6 +40,7 @@ async def ingest_kb(
             org_id=org_id,
             title=title,
             description=description,
+            tag=tag,
             files=files,
         )
 
@@ -70,6 +72,30 @@ async def get_all_kb(
         service = KBService(db)
         chunks = await service.get_by_org(org_id)
         return chunks
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# GET /kb/tags
+# Returns all unique tags for the authenticated org
+# ---------------------------------------------------------------------------
+@router.get("/tags", response_model=List[str])
+async def get_kb_tags(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        org_id = getattr(request.state, "org_id", None)
+        if not org_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: org_id missing")
+
+        service = KBService(db)
+        tags = await service.get_tags_by_org(org_id)
+        return tags
 
     except HTTPException:
         raise

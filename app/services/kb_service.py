@@ -118,17 +118,29 @@ class KBService:
         org_id: str,
         title: str,
         description: str | None,
+        tag: str | None,
         files: List[UploadFile]
     ) -> str:
         """
-        Creates a new kb_id and stores all chunks in ONE collection.
+        Creates a single KnowledgeBase entry and stores all chunks in Qdrant.
         """
 
         try:
             await self._ensure_collection()
 
-            kb_id = uuid.uuid4().hex
             file_names = [f.filename for f in files if f.filename]
+
+            # Save single KB metadata in DB
+            kb_entry = KnowledgeBase(
+                org_id=org_id,
+                title=title,
+                description=description,
+                tag=tag,
+                file_names=file_names,
+                type="manual",
+            )
+            await self.repo.create_kb(kb_entry)
+            kb_id = str(kb_entry.id)
 
             points = []
 
@@ -141,29 +153,17 @@ class KBService:
                 chunks = _chunk_text(extracted)
 
                 for idx, chunk in enumerate(chunks):
-
-                    # Save in DB
-                    kb_chunk = KnowledgeBase(
-                        org_id=org_id,
-                        title=title,
-                        description=description,
-                        file_names=file_names,
-                        kb_id=kb_id,
-                        content=chunk,
-                        type="manual",
-                    )
-
-                    await self.repo.insert_chunk(kb_chunk)
-
+                    point_id = uuid.uuid4().hex
                     embedding = await _get_embedding_async(chunk)
 
                     points.append(
                         PointStruct(
-                            id=str(kb_chunk.id),
+                            id=point_id,
                             vector=embedding,
                             payload={
                                 "org_id": org_id,
                                 "kb_id": kb_id,
+                                "tag": tag,
                                 "text": chunk,
                                 "source": file.filename,
                                 "chunk_index": idx
@@ -187,9 +187,18 @@ class KBService:
     # ---------------------------
     async def get_by_org(self, org_id: str) -> List[KnowledgeBase]:
         try:
-            return await self.repo.get_chunks_by_org(org_id)
+            return await self.repo.get_kbs_by_org(org_id)
         except Exception as e:
             raise Exception(f"Service Error (get_by_org): {str(e)}")
+
+    # ---------------------------
+    # Get tags by org
+    # ---------------------------
+    async def get_tags_by_org(self, org_id: str) -> List[str]:
+        try:
+            return await self.repo.get_tags_by_org(org_id)
+        except Exception as e:
+            raise Exception(f"Service Error (get_tags_by_org): {str(e)}")
 
     # ---------------------------
     # SEARCH
@@ -201,11 +210,6 @@ class KBService:
         kb_id: str | None = None,
         top_k: int = 5
     ) -> List[KBSearchResult]:
-
-        """
-        - If kb_id provided → search within that KB
-        - Else → search across all KBs of org
-        """
 
         try:
             query_embedding = await _get_embedding_async(query)
@@ -229,33 +233,38 @@ class KBService:
                 collection_name=COLLECTION_NAME,
                 query_vector=query_embedding,
                 query_filter=Filter(must=must_conditions),
-                limit=top_k
+                limit=top_k,
+                with_payload=True
             )
 
-            # Map DB chunks
-            ids = [str(r.id) for r in results]
-            db_chunks = await self.repo.get_chunks_by_ids(ids)
-            chunk_map = {str(c.id): c for c in db_chunks}
+            # Map the KB info from DB
+            found_kb_ids = list({str(hit.payload.get("kb_id")) for hit in results if hit.payload and hit.payload.get("kb_id")})
+            db_kbs = await self.repo.get_kbs_by_ids(found_kb_ids)
+            kb_map = {str(kb.id): kb for kb in db_kbs}
 
             response = []
 
             for hit in results:
-                chunk = chunk_map.get(str(hit.id))
+                payload = hit.payload or {}
+                chunk_text = payload.get("text", "")
+                hit_kb_id = str(payload.get("kb_id"))
 
-                if not chunk:
+                kb_entry = kb_map.get(hit_kb_id)
+                if not kb_entry:
                     continue
 
                 response.append(
                     KBSearchResult(
-                        id=chunk.id,
-                        org_id=chunk.org_id,
-                        title=chunk.title,
-                        description=chunk.description,
-                        file_names=chunk.file_names or [],
-                        content=chunk.content,
-                        type=chunk.type,
+                        id=str(hit.id),
+                        org_id=kb_entry.org_id,
+                        title=kb_entry.title,
+                        kb_id=hit_kb_id,
+                        description=kb_entry.description,
+                        file_names=kb_entry.file_names or [],
+                        content=chunk_text,
+                        type=kb_entry.type,
                         score=round(hit.score, 6),
-                        created_at=chunk.created_at,
+                        created_at=kb_entry.created_at,
                     )
                 )
 

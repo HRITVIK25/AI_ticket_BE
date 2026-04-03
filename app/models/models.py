@@ -34,7 +34,9 @@ class Ticket(Base):
     assigned_to = Column(String, nullable=True)  # executive ID
 
     title = Column(String, nullable=False)
-    description = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    tag = Column(String, nullable=True)
+    kb_id = Column(String, nullable=True)
 
     status = Column(String, default="CREATED")
 
@@ -56,8 +58,7 @@ class KnowledgeBase(Base):
     title = Column(String, nullable=False)         # KB document title
     description = Column(Text, nullable=True)      # Human-readable description (NOT embedded)
     file_names = Column(JSON, default=list)        # List of uploaded file names
-    kb_id = Column(String, nullable=False)         # Logical Knowledge Base ID
-    content = Column(Text, nullable=False)         # Raw text chunk
+    tag = Column(String, nullable=True)            # Tag for scoping to tickets
 
     type = Column(String, default="manual")        # e.g. manual, auto
 
