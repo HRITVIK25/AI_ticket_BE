@@ -114,6 +114,29 @@ class TicketService:
         except Exception as e:
             raise Exception(f"Service Error: {str(e)}")
 
+    async def add_message_to_ticket(
+        self, ticket_id: str, message: str, sender_id: str, sender_role: str
+    ) -> Ticket:
+        try:
+            ticket = await self.repo.get_ticket_by_id(ticket_id)
+            if not ticket:
+                return None
+
+            new_message = {
+                "senderId": sender_id,
+                "senderRole": sender_role,
+                "message": message,
+                "createdAt": datetime.utcnow().isoformat(),
+            }
+
+            current_messages = list(ticket.messages) if ticket.messages else []
+            current_messages.append(new_message)
+            ticket.messages = current_messages
+
+            return await self.repo.update_ticket(ticket)
+        except Exception as e:
+            raise Exception(f"Service Error: {str(e)}")
+
     # ── RAG AI Response ───────────────────────────────────────────────────────
     async def generate_rag_ai_response(self, ticket_id: str) -> Ticket:
         try:

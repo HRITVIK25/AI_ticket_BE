@@ -8,6 +8,9 @@ class MessageNode(BaseModel):
     message: str
     createdAt: datetime
 
+class SendMessageRequest(BaseModel):
+    message: str
+
 class TicketCreate(BaseModel):
     title: str
     description: str
