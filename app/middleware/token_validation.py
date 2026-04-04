@@ -38,6 +38,7 @@ class ClerkAuthMiddleware(BaseHTTPMiddleware):
                 raise ValueError("Missing 'sub' in token payload")
 
             org_data = payload.get("o", {})
+            role = org_data.get("rol")
             org_id  = org_data.get("id")
 
         except jwt.ExpiredSignatureError:
@@ -68,6 +69,7 @@ class ClerkAuthMiddleware(BaseHTTPMiddleware):
 
         request.state.user_id = user_id
         request.state.org_id = org_id
+        request.state.role = role
 
         return await call_next(request)
 

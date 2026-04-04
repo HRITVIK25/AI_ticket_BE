@@ -11,6 +11,7 @@ class MessageNode(BaseModel):
 class TicketCreate(BaseModel):
     title: str
     description: str
+    tag: Optional[str] = None
 
 class TicketResponse(BaseModel):
     id: str
@@ -19,6 +20,8 @@ class TicketResponse(BaseModel):
     assigned_to: Optional[str] = None
     title: str
     description: str
+    tag: Optional[str] = None
+    kb_id: Optional[str] = None
     status: str
     ai_response: Optional[str] = None
     messages: List[dict] = []
