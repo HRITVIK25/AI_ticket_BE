@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+.env/
+
+# Environment files (inject secrets at runtime, not baked into the image)
+.env
+*.env
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Tests / CI
+tests/
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Docs
+README.md
+*.md
