@@ -1,9 +1,12 @@
 import os
+from pathlib import Path
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
+# Explicitly point to the .env in project root and override stale values
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
 
 # Example: postgresql://postgres:postgres@localhost:5432/postgres
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -17,7 +20,7 @@ if DATABASE_URL.startswith("postgresql://"):
 # 1. Engine
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,              # disable in prod
+    echo=False,              # disable in prod
     pool_pre_ping=True,     # avoids stale connections
 )
 

@@ -51,5 +51,5 @@ htmlcov/
 # Mypy / Type Checking
 # ===============================
 .mypy_cache/
-
+Database.sql
 # =====================
